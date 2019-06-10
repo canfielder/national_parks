@@ -1,0 +1,109 @@
+---
+title: "National Parks"
+author: "Evan Canfield"
+date: "6/2/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Library Calls
+```{r library calls, message=FALSE, warning=FALSE}
+if (!require(tidyverse)) {install.packages('tidyverse')} 
+library(tidyverse)
+if (!require(readr)) {install.packages('readr')} 
+library(readr)
+if (!require(data.table)) {install.packages('data.table')} 
+library(data.table)
+if (!require(broom)) {install.packages('broom')} 
+library(broom)
+if (!require(plotly)) {install.packages('plotly')} 
+library(plotly)
+if (!require(ggthemes)) {install.packages('ggthemes')} 
+library(ggthemes)
+if (!require(RColorBrewer)) {install.packages('RColorBrewer')} 
+library(RColorBrewer)
+```
+
+#Data Import / Export
+```{r data import,  message=FALSE,}
+#Add file name to data table when importing files. 
+read_plus <- function(flnm) {
+    read_csv(flnm) %>% 
+        mutate(filename = flnm)
+}
+
+file_import <- 
+  list.files(path = "./data/", "*.csv", full.names = T) %>% 
+  map_df(~read_plus(.))
+
+list_np_locations <- read.csv(file = "list_national_parks_location.csv", stringsAsFactors = F)
+
+```
+
+#Data Cleaning
+```{r}
+np_visits_1 <- file_import %>% 
+  mutate(filename = stringr::str_remove_all(filename, "./data/annual_park_ranking_national_parks_")) %>% 
+  mutate(filename = stringr::str_remove_all(filename, ".csv")) %>% 
+  rename(park_name = ParkName, visits = Value, year = filename, ) %>% 
+  select(-PercentOfTotal, -Rank)
+  
+np_visits_1[,2:3] <- sapply(np_visits_1[,2:3], as.numeric)
+
+glimpse(np_visits_1)
+
+glimpse(list_np_locations)
+
+```
+
+#Calculate Percent By Year
+```{r}
+np_visits_year_total <- np_visits_1 %>% 
+  group_by(year) %>% 
+  summarise(total_visits = sum(visits))
+
+glimpse(np_visits_year_total)
+
+np_visits_2 <- np_visits_1 %>% 
+  left_join(np_visits_year_total, by = "year") %>% 
+  mutate(percent_yearly_visits = round((visits / total_visits)*100,2)) %>% 
+  select(park_name, visits, total_visits, percent_yearly_visits, year)
+
+glimpse(np_visits_2)
+
+#Add GPS Data
+np_visits_3 <- np_visits_2 %>% 
+  left_join(y = list_np_locations, by = c('park_name' = 'ParkName')) %>% 
+  select(np_id, everything())
+
+glimpse(np_visits_3)
+
+```
+
+#Line Graph - Percent
+```{r}
+percent_visit.ggplot <- ggplot(data = np_visits_2, mapping = aes(x = year, y = percent_yearly_visits, color = park_name)) +
+  geom_line() +
+  xlab(label = "year") +
+  ylab(label = "Percent of Yearly Visits") +
+  ggtitle(label = "Percent of Yearly Visits by Year") +
+  theme(legend.position = "none")
+
+ggplotly(percent_visit.ggplot)
+
+```
+
+#Line Graph - Total
+```{r}
+total_visit.ggplot <- ggplot(data = np_visits_2, mapping = aes(x = year, y = visits, color = park_name)) +
+  geom_line() +
+  xlab(label = "year") +
+  ylab(label = "Total Visits") +
+  ggtitle(label = "Total Visits by Year") +
+  theme(legend.position = "none")
+
+ggplotly(total_visit.ggplot)
+```

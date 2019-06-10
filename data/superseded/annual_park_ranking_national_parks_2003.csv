@@ -1,0 +1,61 @@
+﻿ParkName,Rank,Value,PercentOfTotal
+Great Smoky Mountains NP,1,"9,366,845",13.65%
+Grand Canyon NP,2,"4,124,900",6.01%
+Yosemite NP,3,"3,378,664",4.92%
+Olympic NP,4,"3,225,327",4.70%
+Rocky Mountain NP,5,"3,067,256",4.47%
+Yellowstone NP,6,"3,019,375",4.40%
+Cuyahoga Valley NP,7,"2,879,591",4.20%
+Gateway Arch NP,8,"2,685,219",3.91%
+Zion NP,9,"2,458,792",3.58%
+Acadia NP,10,"2,431,062",3.54%
+Grand Teton NP,11,"2,355,693",3.43%
+Indiana Dunes NP,12,"1,953,449",2.85%
+Mammoth Cave NP,13,"1,869,137",2.72%
+Glacier NP,14,"1,664,046",2.43%
+Hot Springs NP,15,"1,561,311",2.28%
+Haleakala NP,16,"1,444,668",2.11%
+Joshua Tree NP,17,"1,283,346",1.87%
+Mount Rainier NP,18,"1,262,351",1.84%
+Shenandoah NP,19,"1,163,950",1.70%
+Hawaii Volcanoes NP,20,"1,122,524",1.64%
+Everglades NP,21,"1,040,648",1.52%
+Sequoia NP,22,"979,297",1.43%
+Bryce Canyon NP,23,"903,760",1.32%
+Death Valley NP,24,"890,375",1.30%
+Wind Cave NP,25,"874,167",1.27%
+Badlands NP,26,"871,034",1.27%
+Virgin Islands NP,27,"821,681",1.20%
+Arches NP,28,"757,781",1.10%
+Saguaro NP,29,"643,697",0.94%
+Petrified Forest NP,30,"586,245",0.85%
+Channel Islands NP,31,"585,919",0.85%
+Kings Canyon NP,32,"555,987",0.81%
+Capitol Reef NP,33,"535,441",0.78%
+Theodore Roosevelt NP,34,"490,295",0.71%
+Biscayne NP,35,"490,031",0.71%
+Crater Lake NP,36,"479,183",0.70%
+Carlsbad Caverns NP,37,"457,631",0.67%
+Mesa Verde NP,38,"438,590",0.64%
+Redwood NP,39,"408,126",0.59%
+Lassen Volcanic NP,40,"404,384",0.59%
+Canyonlands NP,41,"386,986",0.56%
+Glacier Bay NP & PRES,42,"366,319",0.53%
+Denali NP & PRES,43,"360,189",0.52%
+Big Bend NP,44,"312,384",0.46%
+Great Sand Dunes NP & PRES,45,"251,375",0.37%
+Kenai Fjords NP,46,"243,719",0.36%
+Voyageurs NP,47,"234,231",0.34%
+Guadalupe Mountains NP,48,"181,357",0.26%
+Black Canyon of the Gunnison NP,49,"167,247",0.24%
+Pinnacles NP,50,"162,791",0.24%
+Congaree NP,51,"107,114",0.16%
+Great Basin NP,52,"87,020",0.13%
+Dry Tortugas NP,53,"74,741",0.11%
+Katmai NP & PRES,54,"51,589",0.08%
+Wrangell-St. Elias NP & PRES,55,"43,311",0.06%
+North Cascades NP,56,"20,724",0.03%
+Isle Royale NP,57,"17,800",0.03%
+Gates of the Arctic NP & PRES,58,"5,075",0.01%
+Lake Clark NP & PRES,59,"4,505",0.01%
+Kobuk Valley NP,60,"4,006",0.01%
