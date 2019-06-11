@@ -15,6 +15,8 @@ if (!require(tidyverse)) {install.packages('tidyverse')}
 library(tidyverse)
 if (!require(readr)) {install.packages('readr')} 
 library(readr)
+if (!require(stringr)) {install.packages('stringr')} 
+library(stringr)
 if (!require(data.table)) {install.packages('data.table')} 
 library(data.table)
 if (!require(broom)) {install.packages('broom')} 
@@ -29,81 +31,156 @@ library(RColorBrewer)
 
 #Data Import / Export
 ```{r data import,  message=FALSE,}
-#Add file name to data table when importing files. 
-read_plus <- function(flnm) {
-    read_csv(flnm) %>% 
-        mutate(filename = flnm)
-}
+#Visitation Data
+nps_summary_complete<- read.csv("./data/annual_summary_report_1904-2018.csv", stringsAsFactors = FALSE)
 
-file_import <- 
-  list.files(path = "./data/", "*.csv", full.names = T) %>% 
-  map_df(~read_plus(.))
-
-list_np_locations <- read.csv(file = "list_national_parks_location.csv", stringsAsFactors = F)
-
+#Location and Region Data on the Parks
+list_np_locations <- read.csv(file = "./data/list_national_parks_location.csv", stringsAsFactors = F)
 ```
 
-#Data Cleaning
+#Data Inspection
 ```{r}
-np_visits_1 <- file_import %>% 
-  mutate(filename = stringr::str_remove_all(filename, "./data/annual_park_ranking_national_parks_")) %>% 
-  mutate(filename = stringr::str_remove_all(filename, ".csv")) %>% 
-  rename(park_name = ParkName, visits = Value, year = filename, ) %>% 
-  select(-PercentOfTotal, -Rank)
-  
-np_visits_1[,2:3] <- sapply(np_visits_1[,2:3], as.numeric)
+glimpse(nps_summary_complete)
 
-glimpse(np_visits_1)
+nps_rec_visits_all <- nps_summary_complete %>% 
+  select(ParkName, Year, RecreationVisitors)
 
-glimpse(list_np_locations)
-
+glimpse(nps_rec_visits_all)
 ```
 
-#Calculate Percent By Year
+#Reduce to National Parks
 ```{r}
-np_visits_year_total <- np_visits_1 %>% 
-  group_by(year) %>% 
-  summarise(total_visits = sum(visits))
+#Add NP to American Samoa for FOllowing Filters
+nps_rec_visits_all$ParkName <- str_replace_all(nps_rec_visits_all$ParkName, "National Park of American Samoa", "National Park of American Samoa NP")
 
-glimpse(np_visits_year_total)
+nps_rec_visits_all %>% 
+  distinct(ParkName)
 
-np_visits_2 <- np_visits_1 %>% 
-  left_join(np_visits_year_total, by = "year") %>% 
-  mutate(percent_yearly_visits = round((visits / total_visits)*100,2)) %>% 
-  select(park_name, visits, total_visits, percent_yearly_visits, year)
+nps_rec_visits_np <- nps_rec_visits_all %>% 
+  filter(str_detect(string = ParkName, " NP")) %>% 
+  filter(str_detect(string = ParkName, " NPRES") == FALSE)
 
-glimpse(np_visits_2)
+nps_rec_visits_np %>% 
+  distinct(ParkName)
 
-#Add GPS Data
-np_visits_3 <- np_visits_2 %>% 
-  left_join(y = list_np_locations, by = c('park_name' = 'ParkName')) %>% 
-  select(np_id, everything())
-
-glimpse(np_visits_3)
-
+glimpse(nps_rec_visits_np)
 ```
 
-#Line Graph - Percent
+#Line Graph
 ```{r}
-percent_visit.ggplot <- ggplot(data = np_visits_2, mapping = aes(x = year, y = percent_yearly_visits, color = park_name)) +
+l <- ggplot(data = nps_rec_visits_np, 
+            mapping = aes(x = Year, y = RecreationVisitors, color = ParkName)) +
   geom_line() +
-  xlab(label = "year") +
-  ylab(label = "Percent of Yearly Visits") +
-  ggtitle(label = "Percent of Yearly Visits by Year") +
-  theme(legend.position = "none")
+  guides(color = FALSE)
 
-ggplotly(percent_visit.ggplot)
-
+ggplotly(l)
 ```
 
-#Line Graph - Total
+#Identify Top 10
 ```{r}
-total_visit.ggplot <- ggplot(data = np_visits_2, mapping = aes(x = year, y = visits, color = park_name)) +
-  geom_line() +
-  xlab(label = "year") +
-  ylab(label = "Total Visits") +
-  ggtitle(label = "Total Visits by Year") +
-  theme(legend.position = "none")
+nps_rec_visits_np_spread <- nps_rec_visits_np %>% 
+  spread(key = Year, value = RecreationVisitors)
 
-ggplotly(total_visit.ggplot)
+glimpse(nps_rec_visits_np_spread)
 ```
+
+#Circular Bar Chart - R Grpah Gallery 295 - Data Prep
+```{r}
+#Join Location Data
+nps_rec_visits_np <- nps_rec_visits_np %>% 
+  left_join(y = list_np_locations)
+
+#Filter for 2018
+nps_rec_visits_np_2018 <- nps_rec_visits_np %>% 
+  filter(Year == 2018)
+
+#Filter Down to Only Park Name
+nps_rec_visits_np_2018$ParkName <- str_remove_all(nps_rec_visits_np_2018$ParkName," NP")
+
+glimpse(nps_rec_visits_np_2018)
+
+nps_rec_visits_np_2018$ParkName <- str_remove_all(nps_rec_visits_np_2018$ParkName," & PRES")
+
+glimpse(nps_rec_visits_np_2018)
+
+#Filter Out Wolf Trap
+nps_rec_visits_np_2018 <- nps_rec_visits_np_2018 %>% 
+  filter(ParkName != 'Wolf Trap for the Performing Arts')
+
+nps_rec_visits_np_2018 <- nps_rec_visits_np_2018 %>% 
+  mutate(percent_visit = round(RecreationVisitors/sum(RecreationVisitors)*100,digits = 2))
+
+glimpse(nps_rec_visits_np_2018)
+
+nps_rec_visits_np_2018 %>% 
+  arrange(np_id)
+```
+
+#Circular Bar Chart - R Grpah Gallery 295
+```{r}
+p_295 <-  
+  ggplot(data = nps_rec_visits_np_2018, 
+          mapping = aes(x = as.factor(np_id), y = percent_visit)) +
+  geom_bar(stat = "identity", fill = alpha("blue", 0.3)) +
+  ylim(-5, 13.5) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(rep(-2,4), "cm")     # This remove unnecessary margin around plot
+  ) +
+  coord_polar(start = 0)
+
+p_295
+```
+
+#Circular Bar Chart With Labels - R Grpah Gallery 296
+```{r}
+labels <- nps_rec_visits_np_2018
+ 
+# calculate the ANGLE of the labels
+number_of_bar <- nrow(labels)
+
+angle <- 90 - 360 * (labels$np_id - 0.5) / number_of_bar     
+
+# I substract 0.5 because the letter must have the angle of the center of the bars. 
+#Not extreme right(1) or extreme left (0)
+ 
+# calculate the alignment of labels: right or left
+# If I am on the left part of the plot, my labels have currently an angle < -90
+labels$hjust <- ifelse( angle < -90, 1, 0)
+ 
+# flip angle BY to make them readable
+labels$angle <- ifelse(angle < -90, angle + 180, angle)
+
+#plot
+p_296 <-  
+  ggplot(data = nps_rec_visits_np_2018, 
+          mapping = aes(x = as.factor(np_id), 
+                        y = percent_visit)) +
+  geom_bar(stat = "identity", fill = alpha("blue", 0.3)) +
+  ylim(-3, 13.8) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(rep(-1,4), "cm")     # This remove unnecessary margin around plot
+  ) +
+  coord_polar(start = 0) +
+  geom_text(data = labels, 
+            mapping = aes(x = np_id, 
+                          y = percent_visit + 0.5, 
+                          label = ParkName,
+                          hjust = hjust), 
+            color="black", 
+            fontface="bold", 
+            alpha=0.6, 
+            size=2, 
+            angle= labels$angle, 
+            inherit.aes = FALSE)
+
+p_296
+```
+
