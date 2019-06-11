@@ -64,6 +64,13 @@ nps_rec_visits_np %>%
   distinct(ParkName)
 
 glimpse(nps_rec_visits_np)
+
+#Join Location Data
+nps_rec_visits_np <- nps_rec_visits_np %>% 
+  left_join(y = list_np_locations, by = c("ParkName"))
+
+glimpse(nps_rec_visits_np)
+
 ```
 
 #Line Graph
@@ -78,18 +85,43 @@ ggplotly(l)
 
 #Identify Top 10
 ```{r}
-nps_rec_visits_np_spread <- nps_rec_visits_np %>% 
-  spread(key = Year, value = RecreationVisitors)
+glimpse(nps_rec_visits_np)
 
-glimpse(nps_rec_visits_np_spread)
+year_filter = 1800
+
+nps_top_10 <- nps_rec_visits_np %>% 
+  filter(Year >= year_filter) %>% 
+  group_by(Year) %>%
+  mutate(total_parks = n_distinct(ParkName)) %>% 
+  mutate(visitors_rank = rank(RecreationVisitors)) %>% 
+  mutate(np_rank = as.integer(total_parks - visitors_rank + 1)) %>% 
+  ungroup() %>% 
+  select(ParkName, np_id, np_rank) %>% 
+  filter(np_rank <= 10) %>% 
+  distinct(ParkName, np_id)
+
+nps_top_10
+
 ```
+#Line Graph Top 10
+```{r}
+nps_rec_visits_np_top_10 <- nps_rec_visits_np %>% 
+  semi_join(y = nps_top_10, by = c("np_id"))
+
+nps_rec_visits_np_top_10
+
+l <- ggplot(data = nps_rec_visits_np_top_10, 
+            mapping = aes(x = Year, y = RecreationVisitors, color = ParkName)) +
+  geom_line() +
+  theme_minimal()
+
+ggplotly(l) %>% 
+  layout(legend = list(x = 0.05, y = 0.99))
+```
+
 
 #Circular Bar Chart - R Grpah Gallery 295 - Data Prep
 ```{r}
-#Join Location Data
-nps_rec_visits_np <- nps_rec_visits_np %>% 
-  left_join(y = list_np_locations)
-
 #Filter for 2018
 nps_rec_visits_np_2018 <- nps_rec_visits_np %>% 
   filter(Year == 2018)
