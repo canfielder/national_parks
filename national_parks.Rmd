@@ -73,7 +73,7 @@ glimpse(nps_rec_visits_np)
 
 ```
 
-#Line Graph
+#Line Graph - All Values
 ```{r}
 l <- ggplot(data = nps_rec_visits_np, 
             mapping = aes(x = Year, y = RecreationVisitors, color = ParkName)) +
@@ -81,6 +81,22 @@ l <- ggplot(data = nps_rec_visits_np,
   guides(color = FALSE)
 
 ggplotly(l)
+```
+
+#Drop Rows from Before National Park
+```{r}
+nps_rec_visits_np_only <- nps_rec_visits_np %>% 
+  filter(Year >= np_established_year )
+
+nps_rec_visits_np_only
+
+m <- ggplot(data = nps_rec_visits_np_only, 
+            mapping = aes(x = Year, y = RecreationVisitors, color = ParkName)) +
+  geom_line() +
+  guides(color = FALSE)
+
+ggplotly(m)
+
 ```
 
 #Identify Top 10
@@ -103,6 +119,7 @@ nps_top_10 <- nps_rec_visits_np %>%
 nps_top_10
 
 ```
+
 #Line Graph Top 10
 ```{r}
 nps_rec_visits_np_top_10 <- nps_rec_visits_np %>% 
@@ -118,7 +135,6 @@ l <- ggplot(data = nps_rec_visits_np_top_10,
 ggplotly(l) %>% 
   layout(legend = list(x = 0.05, y = 0.99))
 ```
-
 
 #Circular Bar Chart - R Grpah Gallery 295 - Data Prep
 ```{r}
@@ -161,10 +177,13 @@ p_295 <-
     axis.title = element_blank(),
     panel.grid = element_blank(),
     plot.margin = unit(rep(-2,4), "cm")     # This remove unnecessary margin around plot
-  ) +
-  coord_polar(start = 0)
+  ) 
 
 p_295
+
+#Wrap in Polar Coordinates
+p_295  + coord_polar(start = 0)
+
 ```
 
 #Circular Bar Chart With Labels - R Grpah Gallery 296
@@ -214,5 +233,135 @@ p_296 <-
             inherit.aes = FALSE)
 
 p_296
+```
+
+#Circular Bar Chart With Labels, Seperated By Region - R Grpah Gallery 296
+```{r}
+nps_rec_visits_np_2018_cir <- nps_rec_visits_np_2018
+
+#Make NPS Region a Factor
+nps_rec_visits_np_2018_cir$nps_region <- as.factor(nps_rec_visits_np_2018_cir$nps_region)
+
+#Arrange Data Input
+ nps_rec_visits_np_2018_cir <- nps_rec_visits_np_2018_cir %>%
+  arrange(nps_region, RecreationVisitors)
+
+# Set a number of 'empty bar' to add at the end of each group
+empty_bar <- 3
+to_add <- data.frame( matrix(NA, empty_bar*nlevels(nps_rec_visits_np_2018_cir$nps_region), ncol(nps_rec_visits_np_2018_cir)))
+colnames(to_add) <- colnames(nps_rec_visits_np_2018_cir)
+to_add$nps_region <- rep(levels(nps_rec_visits_np_2018_cir$nps_region), each=empty_bar)
+nps_rec_visits_np_2018_cir <- rbind(nps_rec_visits_np_2018_cir, to_add)
+nps_rec_visits_np_2018_cir <- nps_rec_visits_np_2018_cir %>% arrange(nps_region)
+nps_rec_visits_np_2018_cir$np_id <- seq(1, nrow(nps_rec_visits_np_2018_cir))
+
+
+#Assign Labels to the Bars
+labels <- nps_rec_visits_np_2018_cir
+ 
+# calculate the ANGLE of the labels
+number_of_bar <- nrow(labels)
+
+angle <- 90 - 360 * (labels$np_id - 0.5) / number_of_bar     
+
+# I substract 0.5 because the letter must have the angle of the center of the bars. 
+#Not extreme right(1) or extreme left (0)
+ 
+# calculate the alignment of labels: right or left
+# If I am on the left part of the plot, my labels have currently an angle < -90
+labels$hjust <- ifelse( angle < -90, 1, 0)
+ 
+# flip angle BY to make them readable
+labels$angle <- ifelse(angle < -90, angle + 180, angle)
+
+#plot
+p_297 <-  
+  ggplot(data = nps_rec_visits_np_2018_cir, 
+          mapping = aes(x = as.factor(np_id), 
+                        y = percent_visit,
+                        fill = nps_region)) +
+  geom_bar(stat = "identity", alpha = 0.5) +
+  ylim(-3, 13.8) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = margin(0, 0, 0, 0, "cm"), # This remove unnecessary margin around plot
+    legend.position = "none"
+    ) +
+  coord_polar(start = 0) +
+  geom_text(data = labels,
+            mapping = aes(x = np_id,
+                          y = percent_visit + 0.5,
+                          label = ParkName,
+                          hjust = hjust),
+            color="black",
+            fontface="bold",
+            alpha=0.6,
+            size=2,
+            angle= labels$angle,
+            inherit.aes = FALSE)
+
+p_297
+```
+
+
+#Plotly
+```{r}
+
+nps_rec_visits_np_2018_plotly <- nps_rec_visits_np_2018 %>% 
+  arrange(nps_region, RecreationVisitors)
+
+glimpse(nps_rec_visits_np_2018_plotly)
+
+# Get incremental angle value
+
+open_space <- 0
+
+n <- nrow(nps_rec_visits_np_2018_plotly) + open_space
+
+dtheta <- 2*pi / n
+
+theta <- pi / 2
+ 
+# Initialise
+x <- c()
+y <- c()
+xend <- c()
+yend <- c()
+
+# This is for the white - circle in the middle
+adjust <- 20
+
+# Calculate x and y coordinates
+for(ctr in 1:nrow(nps_rec_visits_np_2018_plotly)){
+  
+  a <- nps_rec_visits_np_2018_plotly$percent_visit[ctr] + adjust
+  
+  x[ctr] <- adjust * cos(theta)
+  y[ctr] <- adjust * sin(theta)
+  
+  xend[ctr] <- a * cos(theta)
+  yend[ctr] <- a * sin(theta)
+  
+  theta <- theta + dtheta
+}
+
+a
+xend
+y
+
+plot.df <- data.frame(x, y, xend, yend, nps_region = nps_rec_visits_np_2018_plotly$nps_region)
+
+plot.df
+
+p <- plot_ly(plot.df, 
+             x = ~x, y = ~y,
+             xend = ~xend, yend = ~yend,
+             color = ~nps_region) %>% 
+  add_segments(line = list(width = 5))
+
+p
 ```
 
