@@ -51,7 +51,7 @@ glimpse(nps_rec_visits_all)
 #Reduce to National Parks
 ```{r}
 #Add NP to American Samoa for FOllowing Filters
-nps_rec_visits_all$ParkName <- str_replace_all(nps_rec_visits_all$ParkName, "National Park of American Samoa", "National Park of American Samoa NP")
+nps_rec_visits_all$ParkName <- str_replace_all(nps_rec_visits_all$ParkName, "National Park of American Samoa", "American Samoa NP")
 
 nps_rec_visits_all %>% 
   distinct(ParkName)
@@ -408,7 +408,9 @@ x <- c()
 y <- c()
 xend <- c()
 yend <- c()
-segment_length <- c()
+x_len <- c()
+y_len <- c()
+segment_len <- c()
 
 A <- 0.22
 B <- 0.22
@@ -416,7 +418,7 @@ B <- 0.22
 # Radius of the center white-space circle. If set to zero all bars would eminate from the same point when plotting a circle.
 adjust <- 5
 
-# Calculate x and y coordinates
+# Calculate x and y coordinates for bars
 for(ctr in 1:nrow(nps_rec_visits_np_2018_plotly)){
   
   l[ctr] <- nps_rec_visits_np_2018_plotly$percent_visit[ctr] + adjust
@@ -430,7 +432,10 @@ for(ctr in 1:nrow(nps_rec_visits_np_2018_plotly)){
   xend[ctr] <- l[ctr] * x.eq
   yend[ctr] <- l[ctr] * y.eq
   
-  segment_length[ctr] <- sqrt((xend[ctr]-x[ctr])^2 + (yend[ctr]-y[ctr])^2)
+  x_len[ctr] <- xend[ctr] - x[ctr]
+  y_len[ctr] <- yend[ctr] - y[ctr]
+  
+  segment_len[ctr] <- sqrt((xend[ctr]-x[ctr])^2 + (yend[ctr]-y[ctr])^2)
   
   theta <- theta + dtheta
 }
@@ -444,27 +449,76 @@ legend_layout <- list(
   x = 1, y = 1)
 
 
-plot.df <- data.frame(x, y, xend, yend, segment_length, nps_region = nps_rec_visits_np_2018_plotly$nps_region_names)
+plot.df_p1 <- data.frame(x, y, xend, yend, x_len, y_len, segment_len, nps_region = nps_rec_visits_np_2018_plotly$nps_region_names)
 
-p1 <- plot_ly(plot.df, 
+p1 <- plot_ly(plot.df_p1, 
              x = ~x, y = ~y,
              xend = ~xend, yend = ~yend,
+             name = ~nps_rec_visits_np_2018_plotly$nps_region_names,
              color = ~nps_rec_visits_np_2018_plotly$html_color_code_stamps) %>% 
   add_segments(line = list(width = 4),
                hoverinfo = 'text',
                text = ~paste(nps_rec_visits_np_2018_plotly$ParkName,
                       '</br> </br> Visitors: ', nps_rec_visits_np_2018_plotly$RecreationVisitors.fm)
                       )
-
 p1
 
-
-#Add White Radial Lines
+#Add Legend Format and Erase X and Y Axis marks
 p2 <- layout(p1,
             xaxis = list(title = "", showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
             yaxis = list(title = "", showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
             legend = legend_layout
 )
+
+plot.df_p1
+
+p2
+
+#Add National Park Names, Calculate Park Name locations
+theta <- pi / 2
+textangle <- 90
+ 
+for(ctr in 1:nrow(nps_rec_visits_np_2018_plotly)){
+  
+  l[ctr] <- nps_rec_visits_np_2018_plotly$percent_visit[ctr] + adjust
+
+  x.eq <- A*cos(theta)*exp(B*theta) 
+  y.eq <- A*sin(theta)*exp(B*theta) 
+  
+  x[ctr] <- adjust * x.eq
+  y[ctr] <- adjust * y.eq
+  
+  xend[ctr] <- l[ctr] * x.eq
+  yend[ctr] <- l[ctr] * y.eq
+  
+  x_len[ctr] <- xend[ctr] - x[ctr]
+  y_len[ctr] <- yend[ctr] - y[ctr]
+  
+  segment_len[ctr] <- sqrt((xend[ctr]-x[ctr])^2 + (yend[ctr]-y[ctr])^2)
+
+  
+    if(ctr < 30) {xanchor <- "right"; yanchor <- "middle"}
+    if(ctr > 31 & ctr < 50) {xanchor <- "right"; yanchor <- "middle"}
+    if(ctr > 51) {xanchor <- "left"; yanchor <- "middle"}
+
+
+  p2$x$layout$annotations[[ctr]] <- list(x = xend[ctr], y = yend[ctr], showarrow = FALSE,
+                                        text = paste0(nps_rec_visits_np_2018_plotly$ParkName[ctr]),
+                                        textangle = textangle,
+                                        xanchor = xanchor,
+                                        yanchor = yanchor,
+                                        font = list(family = "sans-serif", size = 10),
+                                        borderpad = 0,
+                                        borderwidth = 0)
+  theta <- theta + dtheta
+  textangle <- textangle - (180 / pi * dtheta)
+  
+  if(textangle < -90) textangle <- 90
+}
+
+plot.df_p2 <- data.frame(x, y, xend, yend, x_len, y_len, segment_len)
+
+plot.df_p2
 
 p2
 ```
