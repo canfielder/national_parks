@@ -307,11 +307,11 @@ p_297
 ```
 
 
-#Plotly
+#Plotly - Circle
 ```{r}
-
 nps_rec_visits_np_2018_plotly <- nps_rec_visits_np_2018 %>% 
-  arrange(nps_region, RecreationVisitors)
+  arrange(RecreationVisitors) %>% 
+  mutate(RecreationVisitors.fm = prettyNum(RecreationVisitors, big.mark = "," , scientific = FALSE, ))
 
 glimpse(nps_rec_visits_np_2018_plotly)
 
@@ -321,36 +321,41 @@ open_space <- 0
 
 n <- nrow(nps_rec_visits_np_2018_plotly) + open_space
 
-dtheta <- 2*pi / n
+dtheta <- 2*pi / (n-1)
 
 theta <- pi / 2
  
 # Initialise
+l <- c()
 x <- c()
 y <- c()
 xend <- c()
 yend <- c()
 
-# This is for the white - circle in the middle
-adjust <- 20
+
+# Radius of the center white-space circle. If set to zero all bars would eminate from the same point when plotting a circle.
+adjust <- 2
 
 # Calculate x and y coordinates
 for(ctr in 1:nrow(nps_rec_visits_np_2018_plotly)){
   
-  a <- nps_rec_visits_np_2018_plotly$percent_visit[ctr] + adjust
+  l[ctr] <- nps_rec_visits_np_2018_plotly$percent_visit[ctr] + adjust
   
   x[ctr] <- adjust * cos(theta)
   y[ctr] <- adjust * sin(theta)
   
-  xend[ctr] <- a * cos(theta)
-  yend[ctr] <- a * sin(theta)
+  xend[ctr] <- l[ctr] * cos(theta)
+  yend[ctr] <- l[ctr] * sin(theta)
   
   theta <- theta + dtheta
 }
 
-a
-xend
+l
+x
 y
+xend
+yend
+dtheta
 
 plot.df <- data.frame(x, y, xend, yend, nps_region = nps_rec_visits_np_2018_plotly$nps_region)
 
@@ -360,8 +365,106 @@ p <- plot_ly(plot.df,
              x = ~x, y = ~y,
              xend = ~xend, yend = ~yend,
              color = ~nps_region) %>% 
-  add_segments(line = list(width = 5))
+  add_segments(line = list(width = 5),
+               hoverinfo = 'text',
+               text = ~paste(nps_rec_visits_np_2018_plotly$ParkName,
+                      '</br> </br> Visitors: ', nps_rec_visits_np_2018_plotly$RecreationVisitors.fm)
+                      )
 
 p
 ```
 
+#Plotly - sprial
+```{r}
+nps_rec_visits_np_2018_plotly <- nps_rec_visits_np_2018 %>% 
+  arrange(RecreationVisitors) %>% 
+  mutate(RecreationVisitors.fm = prettyNum(RecreationVisitors, big.mark = "," , scientific = FALSE, ))
+
+glimpse(nps_rec_visits_np_2018_plotly)
+
+#Import NPS Region Color Table
+nps_region_colors <- read.csv("./data/nps_region_colors.csv", stringsAsFactors = FALSE)
+
+glimpse(nps_region_colors)
+
+#Join NPS Region Color to Visits
+nps_rec_visits_np_2018_plotly <- nps_rec_visits_np_2018_plotly %>% 
+  left_join(y = nps_region_colors, by = c("nps_region" = "nps_region"))
+
+glimpse(nps_rec_visits_np_2018_plotly)
+
+# Adds additional spaces in the data table to create offset if open_space > 0
+open_space <- 0
+
+n <- nrow(nps_rec_visits_np_2018_plotly) + open_space
+
+dtheta <- 2*pi / (n-1)
+
+theta <- pi / 2
+ 
+# Initialise
+l <- c()
+x <- c()
+y <- c()
+xend <- c()
+yend <- c()
+segment_length <- c()
+
+A <- 0.22
+B <- 0.22
+
+# Radius of the center white-space circle. If set to zero all bars would eminate from the same point when plotting a circle.
+adjust <- 5
+
+# Calculate x and y coordinates
+for(ctr in 1:nrow(nps_rec_visits_np_2018_plotly)){
+  
+  l[ctr] <- nps_rec_visits_np_2018_plotly$percent_visit[ctr] + adjust
+  
+  x.eq <- A*cos(theta)*exp(B*theta) 
+  y.eq <- A*sin(theta)*exp(B*theta) 
+  
+  x[ctr] <- adjust * x.eq
+  y[ctr] <- adjust * y.eq
+  
+  xend[ctr] <- l[ctr] * x.eq
+  yend[ctr] <- l[ctr] * y.eq
+  
+  segment_length[ctr] <- sqrt((xend[ctr]-x[ctr])^2 + (yend[ctr]-y[ctr])^2)
+  
+  theta <- theta + dtheta
+}
+
+legend_layout <- list(
+  font = list(
+    family = "sans-serif",
+    size = 14,
+    color = "#000"),
+  bg = "transparent",
+  x = 1, y = 1)
+
+
+plot.df <- data.frame(x, y, xend, yend, segment_length, nps_region = nps_rec_visits_np_2018_plotly$nps_region_names)
+
+p1 <- plot_ly(plot.df, 
+             x = ~x, y = ~y,
+             xend = ~xend, yend = ~yend,
+             color = ~nps_rec_visits_np_2018_plotly$html_color_code_stamps) %>% 
+  add_segments(line = list(width = 4),
+               hoverinfo = 'text',
+               text = ~paste(nps_rec_visits_np_2018_plotly$ParkName,
+                      '</br> </br> Visitors: ', nps_rec_visits_np_2018_plotly$RecreationVisitors.fm)
+                      )
+
+p1
+
+
+#Add White Radial Lines
+p2 <- layout(p1,
+            xaxis = list(title = "", showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+            yaxis = list(title = "", showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+            legend = legend_layout
+)
+
+p2
+```
