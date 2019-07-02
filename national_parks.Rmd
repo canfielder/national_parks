@@ -386,14 +386,14 @@ p
 
 #Plotly - sprial, Create Data Frames
 ```{r}
-#List of National Parks By Percent Visited. 
-#This will be used to set the factor levels of the National Park Names
- # np_order <- nps_rec_visits_np_2018 %>% 
- #   arrange(percent_visit) %>% 
- #   select(ParkName) %>% 
- #   #Convert df to list
- #   pull()
-
+# #List of National Parks By Percent Visited. 
+# #This will be used to set the factor levels of the National Park Names
+#  np_order <- nps_rec_visits_np_2018 %>%
+#    arrange(percent_visit) %>%
+#    select(ParkName) %>%
+#    #Convert df to list
+#    pull()
+# 
 # #Reset the Park Name Factor levels to be ordered by percent visit.
 # #If the levels of this factor are not manually set,  Plotly will default the segemnts by alphabetical order by Park Name
 # nps_rec_visits_np_2018$ParkName <- factor(nps_rec_visits_np_2018$ParkName, levels = np_order)
@@ -461,6 +461,8 @@ With the dataframe of plot points now created, we now join that raw data to the 
 #Join New Dataframe with National Park Visitor Information Dataframe and Color Dataframe
 plot.df_p1 <- plot.df %>% 
   left_join(y = nps_rec_visits_np_2018_py, by = c("id" = "np_id"))
+
+glimpse(plot.df_p1)
 
 #Bar Chart is arranged by aplphabetic order. We need to incorporate factor levels to force the bar chart
 # to ascending order by percent visited
