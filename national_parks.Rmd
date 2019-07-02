@@ -32,17 +32,27 @@ library(RColorBrewer)
 #Data Import / Export
 ```{r data import,  message=FALSE,}
 #Visitation Data
-nps_summary_complete<- read.csv("./data/annual_summary_report_1904-2018.csv", stringsAsFactors = FALSE)
+nps_summary_all<- read.csv("./data/annual_summary_report_1904-2018.csv", stringsAsFactors = FALSE)
 
 #Location and Region Data on the Parks
 list_np_locations <- read.csv(file = "./data/list_national_parks_location.csv", stringsAsFactors = F)
+
+#Import NPS Region Color Table
+nps_region_colors <- read.csv("./data/nps_region_colors.csv", stringsAsFactors = FALSE)
 ```
+
+#Color Map 
+```{r}
+#Assign Colors to NPS Regions
+color_map <- setNames(nps_region_colors$html_color_code_stamps,nps_region_colors$nps_region)
+```
+
 
 #Data Inspection
 ```{r}
-glimpse(nps_summary_complete)
+glimpse(nps_summary_all)
 
-nps_rec_visits_all <- nps_summary_complete %>% 
+nps_rec_visits_all <- nps_summary_all %>% 
   select(ParkName, Year, RecreationVisitors)
 
 glimpse(nps_rec_visits_all)
@@ -50,26 +60,28 @@ glimpse(nps_rec_visits_all)
 
 #Reduce to National Parks
 ```{r}
-#Add NP to American Samoa for FOllowing Filters
+#Add NP to American Samoa for Downstream Filters
+#Remove National Park from the name. This is a formatting choice.
 nps_rec_visits_all$ParkName <- str_replace_all(nps_rec_visits_all$ParkName, "National Park of American Samoa", "American Samoa NP")
 
 nps_rec_visits_all %>% 
   distinct(ParkName)
 
+#Filter for National Park (NP) and National Preserve (NPRES)
+#This is due to some national parks also being National Preserves
 nps_rec_visits_np <- nps_rec_visits_all %>% 
   filter(str_detect(string = ParkName, " NP")) %>% 
   filter(str_detect(string = ParkName, " NPRES") == FALSE)
 
+#Generate distinct list of national parks
 nps_rec_visits_np %>% 
   distinct(ParkName)
 
-glimpse(nps_rec_visits_np)
-
-#Join Location Data
+#Join Location Data by ParkName
 nps_rec_visits_np <- nps_rec_visits_np %>% 
   left_join(y = list_np_locations, by = c("ParkName"))
 
-glimpse(nps_rec_visits_np)
+
 
 ```
 
@@ -83,7 +95,7 @@ l <- ggplot(data = nps_rec_visits_np,
 ggplotly(l)
 ```
 
-#Drop Rows from Before National Park
+#Drop Years from Before Entity Became a National Park
 ```{r}
 nps_rec_visits_np_only <- nps_rec_visits_np %>% 
   filter(Year >= np_established_year )
@@ -117,7 +129,6 @@ nps_top_10 <- nps_rec_visits_np %>%
   distinct(ParkName, np_id)
 
 nps_top_10
-
 ```
 
 #Line Graph Top 10
@@ -136,7 +147,7 @@ ggplotly(l) %>%
   layout(legend = list(x = 0.05, y = 0.99))
 ```
 
-#Circular Bar Chart - R Grpah Gallery 295 - Data Prep
+#Data Prep - Circular Bar Chart - R Grpah Gallery 295 - 
 ```{r}
 #Filter for 2018
 nps_rec_visits_np_2018 <- nps_rec_visits_np %>% 
@@ -306,20 +317,19 @@ p_297 <-
 p_297
 ```
 
-
 #Plotly - Circle
 ```{r}
-nps_rec_visits_np_2018_plotly <- nps_rec_visits_np_2018 %>% 
+nps_rec_visits_np_2018_py <- nps_rec_visits_np_2018 %>% 
   arrange(RecreationVisitors) %>% 
   mutate(RecreationVisitors.fm = prettyNum(RecreationVisitors, big.mark = "," , scientific = FALSE, ))
 
-glimpse(nps_rec_visits_np_2018_plotly)
+glimpse(nps_rec_visits_np_2018_py)
 
 # Get incremental angle value
 
 open_space <- 0
 
-n <- nrow(nps_rec_visits_np_2018_plotly) + open_space
+n <- nrow(nps_rec_visits_np_2018_py) + open_space
 
 dtheta <- 2*pi / (n-1)
 
@@ -337,9 +347,9 @@ yend <- c()
 adjust <- 2
 
 # Calculate x and y coordinates
-for(ctr in 1:nrow(nps_rec_visits_np_2018_plotly)){
+for(ctr in 1:nrow(nps_rec_visits_np_2018_py)){
   
-  l[ctr] <- nps_rec_visits_np_2018_plotly$percent_visit[ctr] + adjust
+  l[ctr] <- nps_rec_visits_np_2018_py$percent_visit[ctr] + adjust
   
   x[ctr] <- adjust * cos(theta)
   y[ctr] <- adjust * sin(theta)
@@ -357,7 +367,7 @@ xend
 yend
 dtheta
 
-plot.df <- data.frame(x, y, xend, yend, nps_region = nps_rec_visits_np_2018_plotly$nps_region)
+plot.df <- data.frame(x, y, xend, yend, nps_region = nps_rec_visits_np_2018_py$nps_region)
 
 plot.df
 
@@ -367,8 +377,8 @@ p <- plot_ly(plot.df,
              color = ~nps_region) %>% 
   add_segments(line = list(width = 5),
                hoverinfo = 'text',
-               text = ~paste(nps_rec_visits_np_2018_plotly$ParkName,
-                      '</br> </br> Visitors: ', nps_rec_visits_np_2018_plotly$RecreationVisitors.fm)
+               text = ~paste(nps_rec_visits_np_2018_py$ParkName,
+                      '</br> </br> Visitors: ', nps_rec_visits_np_2018_py$RecreationVisitors.fm)
                       )
 
 p
@@ -376,57 +386,59 @@ p
 
 #Plotly - sprial, Create Data Frames
 ```{r}
-nps_rec_visits_np_2018_plotly <- nps_rec_visits_np_2018 %>% 
-  arrange(RecreationVisitors) %>% 
-  mutate(RecreationVisitors.fm = prettyNum(RecreationVisitors, big.mark = "," , scientific = FALSE, ))
+#List of National Parks By Percent Visited. 
+#This will be used to set the factor levels of the National Park Names
+ # np_order <- nps_rec_visits_np_2018 %>% 
+ #   arrange(percent_visit) %>% 
+ #   select(ParkName) %>% 
+ #   #Convert df to list
+ #   pull()
 
-glimpse(nps_rec_visits_np_2018_plotly)
+# #Reset the Park Name Factor levels to be ordered by percent visit.
+# #If the levels of this factor are not manually set,  Plotly will default the segemnts by alphabetical order by Park Name
+# nps_rec_visits_np_2018$ParkName <- factor(nps_rec_visits_np_2018$ParkName, levels = np_order)
 
-#Import NPS Region Color Table
-nps_region_colors <- read.csv("./data/nps_region_colors.csv", stringsAsFactors = FALSE)
-
-glimpse(nps_region_colors)
-
-#Join NPS Region Color to Visits
-nps_rec_visits_np_2018_plotly <- nps_rec_visits_np_2018_plotly %>% 
-  left_join(y = nps_region_colors, by = c("nps_region" = "nps_region"))
-
-glimpse(nps_rec_visits_np_2018_plotly)
+#Format Number Type. Convcert Number of visitors to a number with comma seperators
+nps_rec_visits_np_2018_py <- nps_rec_visits_np_2018 %>% 
+  mutate(RecreationVisitors.fm = prettyNum(RecreationVisitors, big.mark = "," , scientific = FALSE, )) %>% 
+  arrange(percent_visit)
 ```
 
-#Plotly - sprial, Initial Plot
+#Plotly - sprial, Initial Plot Layout
 ```{r}
 # Adds additional spaces in the data table to create offset if open_space > 0
-open_space <- 0
+open_space <- 10
 
-n <- nrow(nps_rec_visits_np_2018_plotly) + open_space
+#Number of spaces within the spiral.
+#If open space is set to zero the bar chart will fully rotate around the axis
+n <- nrow(nps_rec_visits_np_2018_py) + open_space
 
+#Attributes for determining placement around axis
 dtheta <- 2*pi / (n-1)
 
-theta <- pi / 2
+theta <- pi * (1/2)
  
-# Initialise
+# Initialise For Loop Entities
 l <- c()
 x <- c()
 y <- c()
 id <- c()
 xend <- c()
 yend <- c()
-x_len <- c()
-y_len <- c()
 segment_len <- c()
 
-A <- 0.22
-B <- 0.22
+#Spiral Equaltion Constants
+A <- 0.25
+B <- 0.25
 
 # Radius of the center white-space circle. If set to zero all bars would eminate from the same point when plotting a circle.
 adjust <- 5
 
 # Calculate x and y coordinates for bars
-for(ctr in 1:nrow(nps_rec_visits_np_2018_plotly)){
+for(ctr in 1:nrow(nps_rec_visits_np_2018_py)){
   
-  id[ctr] <-nps_rec_visits_np_2018_plotly$np_id[ctr]
-  l[ctr] <- nps_rec_visits_np_2018_plotly$percent_visit[ctr] + adjust
+  id[ctr] <-nps_rec_visits_np_2018_py$np_id[ctr]
+  l[ctr] <- nps_rec_visits_np_2018_py$percent_visit[ctr] + adjust
   
   x.eq <- A*cos(theta)*exp(B*theta) 
   y.eq <- A*sin(theta)*exp(B*theta) 
@@ -437,60 +449,57 @@ for(ctr in 1:nrow(nps_rec_visits_np_2018_plotly)){
   xend[ctr] <- l[ctr] * x.eq
   yend[ctr] <- l[ctr] * y.eq
   
-  x_len[ctr] <- xend[ctr] - x[ctr]
-  y_len[ctr] <- yend[ctr] - y[ctr]
-  
-  segment_len[ctr] <- sqrt((xend[ctr]-x[ctr])^2 + (yend[ctr]-y[ctr])^2)
-  
   theta <- theta + dtheta
 }
 
+#Generate Dataframe for Plotly visual
+plot.df <- data.frame(id, x, y, xend, yend)
+```
 
-#Assign Colors to NPS Regions
-color_map <- setNames(nps_region_colors$html_color_code_stamps, nps_region_colors$nps_region)
+With the dataframe of plot points now created, we now join that raw data to the national parks dataframe and plot the visual
+```{r}
+#Join New Dataframe with National Park Visitor Information Dataframe and Color Dataframe
+plot.df_p1 <- plot.df %>% 
+  left_join(y = nps_rec_visits_np_2018_py, by = c("id" = "np_id"))
 
-
-plot.df_p1 <- data.frame(id, x, y, xend, yend, x_len, y_len, segment_len, stringsAsFactors = FALSE)
-
-plot.df_p1 <- plot.df_p1 %>% 
-  left_join(y = nps_rec_visits_np_2018_plotly, by = c("id" = "np_id")) %>% 
-  arrange(id)
-
-glimpse(plot.df_p1)
-
+#Bar Chart is arranged by aplphabetic order. We need to incorporate factor levels to force the bar chart
+# to ascending order by percent visited
 p1 <- plot_ly(plot.df_p1,
-              type="scatter",
-              mode = 'lines',
-              name = ~nps_region_names) %>% 
+              name = ~nps_region) %>% 
   add_segments(x = ~x, xend = ~xend,
                y = ~y, yend = ~yend,
-               color = ~color_map[nps_region],
-               line = list(width = 4),
-               hoverinfo = 'text',
-               text = ~paste(ParkName,
-                      '</br> </br> Visitors: ', RecreationVisitors.fm)
-                      )
+               color = ~nps_region,
+               colors = color_map,
+               line = list(
+                 width = 6), 
+                 hoverinfo = 'text',
+                 text = ~paste(ParkName,
+                       '</br> </br> Visitors: ', RecreationVisitors.fm)
+                       )
 p1
-color_map["rocky_mountain"]
 ```
 
 #Add Formatting
 ```{r}
 #Add Legend Format and Erase X and Y Axis marks
 legend_layout <- list(
-  name = ~nps_region_names,
+  name = ~nps_region,
   font = list(
     family = "sans-serif",
     size = 14,
     color = "#000"),
   bg = "transparent",
-  x = 1, y = 1)
+  #orientation = "h",
+  x = 0, 
+  y = 1)
 
 
 p2 <- layout(p1,
-            xaxis = list(title = "", showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+            xaxis = list(title = "", showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE, range = c(-4,12)),
             yaxis = list(title = "", showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-            legend = legend_layout
+            legend = legend_layout,
+            autosize = TRUE
+            #width = 500, height = 800
 )
 
 p2
@@ -499,12 +508,11 @@ p2
 #Add Labels
 ```{r}
 #Add National Park Names, Calculate Park Name locations
-theta <- pi / 2
 textangle <- 90
  
-for(ctr in 1:nrow(nps_rec_visits_np_2018_plotly)){
+for(ctr in 1:nrow(nps_rec_visits_np_2018_py)){
   
-  l[ctr] <- nps_rec_visits_np_2018_plotly$percent_visit[ctr] + adjust
+  l[ctr] <- nps_rec_visits_np_2018_py$percent_visit[ctr] + adjust
 
   x.eq <- A*cos(theta)*exp(B*theta) 
   y.eq <- A*sin(theta)*exp(B*theta) 
@@ -527,7 +535,7 @@ for(ctr in 1:nrow(nps_rec_visits_np_2018_plotly)){
 
 
   p2$x$layout$annotations[[ctr]] <- list(x = xend[ctr], y = yend[ctr], showarrow = FALSE,
-                                        text = paste0(nps_rec_visits_np_2018_plotly$ParkName[ctr]),
+                                        text = paste0(nps_rec_visits_np_2018_py$ParkName[ctr]),
                                         textangle = textangle,
                                         xanchor = xanchor,
                                         yanchor = yanchor,
