@@ -407,7 +407,7 @@ nps_rec_visits_np_2018_py <- nps_rec_visits_np_2018 %>%
 #Plotly - sprial, Initial Plot Layout
 ```{r}
 # Adds additional spaces in the data table to create offset if open_space > 0
-open_space <- 10
+open_space <- 0
 
 #Number of spaces within the spiral.
 #If open space is set to zero the bar chart will fully rotate around the axis
@@ -416,7 +416,7 @@ n <- nrow(nps_rec_visits_np_2018_py) + open_space
 #Attributes for determining placement around axis
 dtheta <- 2*pi / (n-1)
 
-theta <- pi * (1/2)
+theta <- pi * (3/8)
  
 # Initialise For Loop Entities
 l <- c()
@@ -461,7 +461,6 @@ With the dataframe of plot points now created, we now join that raw data to the 
 #Join New Dataframe with National Park Visitor Information Dataframe and Color Dataframe
 plot.df_p1 <- plot.df %>% 
   left_join(y = nps_rec_visits_np_2018_py, by = c("id" = "np_id"))
-
 glimpse(plot.df_p1)
 
 #Bar Chart is arranged by aplphabetic order. We need to incorporate factor levels to force the bar chart
@@ -511,6 +510,10 @@ p2
 ```{r}
 #Add National Park Names, Calculate Park Name locations
 textangle <- 90
+
+#Initilaize
+x_len <- c()
+y_len <- c()
  
 for(ctr in 1:nrow(nps_rec_visits_np_2018_py)){
   
@@ -554,7 +557,7 @@ p3 <- p2
 
 plot.df_p3 <- data.frame(x, y, xend, yend, x_len, y_len, segment_len)
 
-plot.df_p3
+glimpse(plot.df_p3)
 
 p3
 ```
