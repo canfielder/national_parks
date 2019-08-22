@@ -11,22 +11,17 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #Library Calls
 ```{r library calls, message=FALSE, warning=FALSE}
-if (!require(tidyverse)) {install.packages('tidyverse')} 
-library(tidyverse)
-if (!require(readr)) {install.packages('readr')} 
-library(readr)
-if (!require(stringr)) {install.packages('stringr')} 
-library(stringr)
-if (!require(data.table)) {install.packages('data.table')} 
-library(data.table)
-if (!require(broom)) {install.packages('broom')} 
-library(broom)
-if (!require(plotly)) {install.packages('plotly')} 
-library(plotly)
-if (!require(ggthemes)) {install.packages('ggthemes')} 
-library(ggthemes)
-if (!require(RColorBrewer)) {install.packages('RColorBrewer')} 
-library(RColorBrewer)
+if (!require(pacman)) {install.packages('pacman')} 
+p_load(
+    broom
+  , data.table
+  , ggthemes
+  , plotly
+  , RColorBrewer
+  , readr
+  , stringr
+  , tidyverse
+)
 ```
 
 #Data Import / Export
@@ -35,7 +30,7 @@ library(RColorBrewer)
 nps_summary_all<- read.csv("./data/annual_summary_report_1904-2018.csv", stringsAsFactors = FALSE)
 
 #Location and Region Data on the Parks
-list_np_locations <- read.csv(file = "./data/list_national_parks_location.csv", stringsAsFactors = F)
+list_np_locations <- read.csv(file = "./data/list_national_parks_location.csv", stringsAsFactors = FALSE)
 
 #Import NPS Region Color Table
 nps_region_colors <- read.csv("./data/nps_region_colors.csv", stringsAsFactors = FALSE)
@@ -44,16 +39,16 @@ nps_region_colors <- read.csv("./data/nps_region_colors.csv", stringsAsFactors =
 #Color Map 
 ```{r}
 #Assign Colors to NPS Regions
-color_map <- setNames(nps_region_colors$html_color_code_stamps,nps_region_colors$nps_region)
+color_map <- setNames(nps_region_colors$html_color_code_stamps,nps_region_colors$nps_region_names)
 ```
-
 
 #Data Inspection
 ```{r}
 glimpse(nps_summary_all)
 
 nps_rec_visits_all <- nps_summary_all %>% 
-  select(ParkName, Year, RecreationVisitors)
+  select(ParkName, Year, RecreationVisitors) %>% 
+  mutate(ParkName = as.factor(ParkName))
 
 glimpse(nps_rec_visits_all)
 ```
@@ -62,10 +57,12 @@ glimpse(nps_rec_visits_all)
 ```{r}
 #Add NP to American Samoa for Downstream Filters
 #Remove National Park from the name. This is a formatting choice.
-nps_rec_visits_all$ParkName <- str_replace_all(nps_rec_visits_all$ParkName, "National Park of American Samoa", "American Samoa NP")
+nps_rec_visits_all$ParkName <- str_replace_all(nps_rec_visits_all$ParkName
+                                               , "National Park of American Samoa"
+                                               , "American Samoa NP")
 
-nps_rec_visits_all %>% 
-  distinct(ParkName)
+# nps_rec_visits_all %>% 
+#   distinct(ParkName)
 
 #Filter for National Park (NP) and National Preserve (NPRES)
 #This is due to some national parks also being National Preserves
@@ -74,14 +71,12 @@ nps_rec_visits_np <- nps_rec_visits_all %>%
   filter(str_detect(string = ParkName, " NPRES") == FALSE)
 
 #Generate distinct list of national parks
-nps_rec_visits_np %>% 
-  distinct(ParkName)
+# nps_rec_visits_np %>% 
+#   distinct(ParkName)
 
 #Join Location Data by ParkName
 nps_rec_visits_np <- nps_rec_visits_np %>% 
   left_join(y = list_np_locations, by = c("ParkName"))
-
-
 
 ```
 
@@ -108,7 +103,6 @@ m <- ggplot(data = nps_rec_visits_np_only,
   guides(color = FALSE)
 
 ggplotly(m)
-
 ```
 
 #Identify Top 10
@@ -314,7 +308,7 @@ p_297 <-
             angle= labels$angle,
             inherit.aes = FALSE)
 
-p_297
+#p_297
 ```
 
 #Plotly - Circle
@@ -381,7 +375,7 @@ p <- plot_ly(plot.df,
                       '</br> </br> Visitors: ', nps_rec_visits_np_2018_py$RecreationVisitors.fm)
                       )
 
-p
+#p
 ```
 
 #Plotly - sprial, Create Data Frames
@@ -461,11 +455,28 @@ With the dataframe of plot points now created, we now join that raw data to the 
 #Join New Dataframe with National Park Visitor Information Dataframe and Color Dataframe
 plot.df_p1 <- plot.df %>% 
   left_join(y = nps_rec_visits_np_2018_py, by = c("id" = "np_id"))
+
 glimpse(plot.df_p1)
+
+plot.df_p1 %>% 
+  distinct(nps_region)
+
+# Rename Park Regions for the Plot Legend
+plot.df_p2 <- plot.df_p1 %>% 
+  mutate(nps_region = recode(nps_region
+                             , "midwest" = "Midwest"
+                             , "north_atlantic" = "North Atlantic" 
+                             , "pacific_northwest_and_alaska" = "Pacific Northwest & Alaska"
+                             , "rocky_mountain" = "Rocky Mountain"
+                             , "southeast" = "Southeast"
+                             , "southwest" = "Southwest"
+                             , "western" = "Western"
+                             )
+  )
 
 #Bar Chart is arranged by aplphabetic order. We need to incorporate factor levels to force the bar chart
 # to ascending order by percent visited
-p1 <- plot_ly(plot.df_p1,
+p1 <- plot_ly(plot.df_p2,
               name = ~nps_region) %>% 
   add_segments(x = ~x, xend = ~xend,
                y = ~y, yend = ~yend,
@@ -482,6 +493,7 @@ p1
 
 #Add Formatting
 ```{r}
+
 #Add Legend Format and Erase X and Y Axis marks
 legend_layout <- list(
   name = ~nps_region,
